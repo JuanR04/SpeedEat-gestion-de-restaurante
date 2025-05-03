@@ -56,6 +56,7 @@ CREATE TABLE `pedido` (
 -- Disparadores `pedido`
 --
 DELIMITER $$
+<<<<<<< HEAD
 CREATE TRIGGER `ActualizarCapacidad` AFTER INSERT ON `pedido` FOR EACH ROW BEGIN
     DECLARE capacidad_actual INT;
 
@@ -76,10 +77,33 @@ CREATE TRIGGER `ActualizarCapacidad` AFTER INSERT ON `pedido` FOR EACH ROW BEGIN
         SET disponible = FALSE
         WHERE id_espacio = NEW.mesa_id;
     END IF;
+=======
+CREATE TRIGGER `ActualizarCapacidad` AFTER INSERT ON `pedido` FOR EACH ROW BEGIN
+    DECLARE capacidad_actual INT;
+
+    -- Obtener la capacidad actual de la mesa
+    SELECT capacidad
+    INTO capacidad_actual
+    FROM espacios
+    WHERE id_espacio = NEW.mesa_id;
+
+    -- Actualizar la capacidad restando la cantidad de personas del nuevo pedido
+    UPDATE espacios
+    SET capacidad = capacidad_actual - NEW.cant_personas
+    WHERE id_espacio = NEW.mesa_id;
+
+    -- Verificar si la capacidad es 0 y actualizar la disponibilidad
+    IF capacidad_actual - NEW.cant_personas <= 0 THEN
+        UPDATE espacios
+        SET disponible = FALSE
+        WHERE id_espacio = NEW.mesa_id;
+    END IF;
+>>>>>>> 7b5ef18 (SpeedEat)
 END
 $$
 DELIMITER ;
 DELIMITER $$
+<<<<<<< HEAD
 CREATE TRIGGER `DevolverCapacidad` AFTER UPDATE ON `pedido` FOR EACH ROW BEGIN
     -- Solo actuar si el estado cambia a "CANCELADO" o "PAGADO"
     IF (OLD.estado NOT IN ('CANCELADO', 'PAGADO')) AND (NEW.estado IN ('CANCELADO', 'PAGADO')) THEN
@@ -94,10 +118,27 @@ CREATE TRIGGER `DevolverCapacidad` AFTER UPDATE ON `pedido` FOR EACH ROW BEGIN
         WHERE id_espacio = OLD.mesa_id
           AND capacidad > 0;
     END IF;
+=======
+CREATE TRIGGER `DevolverCapacidad` AFTER UPDATE ON `pedido` FOR EACH ROW BEGIN
+    -- Solo actuar si el estado cambia a "CANCELADO" o "PAGADO"
+    IF (OLD.estado NOT IN ('CANCELADO', 'PAGADO')) AND (NEW.estado IN ('CANCELADO', 'PAGADO')) THEN
+        -- Actualizar la capacidad sumando la cantidad de personas del pedido
+        UPDATE espacios
+        SET capacidad = capacidad + OLD.cant_personas
+        WHERE id_espacio = OLD.mesa_id;
+
+        -- Verificar si la capacidad es mayor a 0 y actualizar la disponibilidad
+        UPDATE espacios
+        SET disponible = TRUE
+        WHERE id_espacio = OLD.mesa_id
+          AND capacidad > 0;
+    END IF;
+>>>>>>> 7b5ef18 (SpeedEat)
 END
 $$
 DELIMITER ;
 DELIMITER $$
+<<<<<<< HEAD
 CREATE TRIGGER `DevolverProducto` AFTER UPDATE ON `pedido` FOR EACH ROW BEGIN
     -- Solo actuar si el estado cambia a "CANCELADO"
     IF OLD.estado <> 'CANCELADO' AND NEW.estado = 'CANCELADO' THEN
@@ -116,6 +157,26 @@ CREATE TRIGGER `DevolverProducto` AFTER UPDATE ON `pedido` FOR EACH ROW BEGIN
             WHERE pp.pedido_id = OLD.id_pedido
         ) AND cantidad_disponible > 0;
     END IF;
+=======
+CREATE TRIGGER `DevolverProducto` AFTER UPDATE ON `pedido` FOR EACH ROW BEGIN
+    -- Solo actuar si el estado cambia a "CANCELADO"
+    IF OLD.estado <> 'CANCELADO' AND NEW.estado = 'CANCELADO' THEN
+        -- Devolver las cantidades de los productos asociados al pedido
+        UPDATE productos p
+        JOIN pedidoproducto pp ON pp.producto_id = p.id_producto
+        SET p.cantidad_disponible = p.cantidad_disponible + pp.cantidad
+        WHERE pp.pedido_id = OLD.id_pedido;
+
+        -- Actualizar el estado del producto si hay stock disponible
+        UPDATE productos
+        SET estado = TRUE
+        WHERE id_producto IN (
+            SELECT pp.producto_id
+            FROM pedidoproducto pp
+            WHERE pp.pedido_id = OLD.id_pedido
+        ) AND cantidad_disponible > 0;
+    END IF;
+>>>>>>> 7b5ef18 (SpeedEat)
 END
 $$
 DELIMITER ;
@@ -138,6 +199,7 @@ CREATE TABLE `pedidoproducto` (
 -- Disparadores `pedidoproducto`
 --
 DELIMITER $$
+<<<<<<< HEAD
 CREATE TRIGGER `ActulizarCantidad` AFTER INSERT ON `pedidoproducto` FOR EACH ROW BEGIN
     DECLARE cantidad_disponible_actual INT;
 
@@ -158,6 +220,28 @@ CREATE TRIGGER `ActulizarCantidad` AFTER INSERT ON `pedidoproducto` FOR EACH ROW
         SET estado = FALSE
         WHERE id_producto = NEW.producto_id;
     END IF;
+=======
+CREATE TRIGGER `ActulizarCantidad` AFTER INSERT ON `pedidoproducto` FOR EACH ROW BEGIN
+    DECLARE cantidad_disponible_actual INT;
+
+    -- Obtener la cantidad disponible actual del producto
+    SELECT cantidad_disponible
+    INTO cantidad_disponible_actual
+    FROM productos
+    WHERE id_producto = NEW.producto_id;
+
+    -- Actualizar la cantidad disponible restando la cantidad del nuevo pedido
+    UPDATE productos
+    SET cantidad_disponible = cantidad_disponible_actual - NEW.cantidad
+    WHERE id_producto = NEW.producto_id;
+
+    -- Verificar si la cantidad disponible es 0 y actualizar el estado
+    IF cantidad_disponible_actual - NEW.cantidad <= 0 THEN
+        UPDATE productos
+        SET estado = FALSE
+        WHERE id_producto = NEW.producto_id;
+    END IF;
+>>>>>>> 7b5ef18 (SpeedEat)
 END
 $$
 DELIMITER ;
